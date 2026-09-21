@@ -17,7 +17,7 @@ class MessageHandler:
         """
         Serialize the EOF message adding a client id to know which client sent the EOF message.
         """
-        return message_protocol.internal.serialize([self.client_id,None])
+        return message_protocol.internal.serialize([self.client_id, None])
 
     def deserialize_result_message(self, message):
         """

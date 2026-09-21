@@ -26,19 +26,20 @@ class SumFilter:
             self.data_output_exchanges.append(data_output_exchange)
         self.amount_by_fruit = {}
 
-    def _process_data(self, fruit, amount):
+    def _process_data(self, client_id, fruit, amount):
         logging.info(f"Process data")
-        self.amount_by_fruit[fruit] = self.amount_by_fruit.get(
-            fruit, fruit_item.FruitItem(fruit, 0)
+        self.amount_by_fruit[(client_id, fruit)] = self.amount_by_fruit.get(
+            (client_id, fruit), fruit_item.FruitItem(fruit, 0)
         ) + fruit_item.FruitItem(fruit, int(amount))
 
-    def _process_eof(self):
+    def _process_eof(self, client_id_eof):
         logging.info(f"Broadcasting data messages")
-        for final_fruit_item in self.amount_by_fruit.values():
+        for (client_id, _), final_fruit_item in self.amount_by_fruit.items():
+            if client_id != client_id_eof: continue
             for data_output_exchange in self.data_output_exchanges:
                 data_output_exchange.send(
                     message_protocol.internal.serialize(
-                        [final_fruit_item.fruit, final_fruit_item.amount]
+                        [(client_id, final_fruit_item.fruit), final_fruit_item.amount]
                     )
                 )
 
@@ -49,10 +50,12 @@ class SumFilter:
 
     def process_data_messsage(self, message, ack, nack):
         fields = message_protocol.internal.deserialize(message)
+        [(client_id, fruit), amount] = fields
+
         if len(fields) == 2:
-            self._process_data(*fields)
+            self._process_data(client_id, fruit, amount)
         else:
-            self._process_eof(*fields)
+            self._process_eof(client_id)
         ack()
 
     def start(self):

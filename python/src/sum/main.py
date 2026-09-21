@@ -1,6 +1,7 @@
 import os
 import logging
 import threading
+import hashlib
 
 from common import middleware, message_protocol, fruit_item
 
@@ -36,6 +37,7 @@ class SumFilter:
         self.amount_by_clients_and_fruit = {} # {client_id: {fruit: FruitItem}}
         self.amounts_lock = threading.Lock() 
 
+
     def _process_data(self, client_id, fruit, amount):
         logging.info(f"Process data")
         client_fruits = self.amount_by_clients_and_fruit.setdefault(client_id,{}) # return a reference of the dict ~ O(1)
@@ -52,14 +54,19 @@ class SumFilter:
         self.control_eof_publisher.send(message_protocol.internal.serialize([client_id_eof]))
 
 
+    def aggregation_index_for(self, fruit):
+        digest = hashlib.md5(fruit.encode("utf-8")).digest()
+        return int.from_bytes(digest[:4], "big") % AGGREGATION_AMOUNT
+
+
     def _process_eof(self, client_id_eof):
         logging.info("Broadcasting data messages")
         client_fruits = self.amount_by_clients_and_fruit.pop(client_id_eof,{})
 
         for item in client_fruits.values():
             message = message_protocol.internal.serialize([client_id_eof, item.fruit, item.amount])
-            for data_output_exchange in self.data_output_exchanges:
-                data_output_exchange.send(message)
+            target_aggregation_index = self.aggregation_index_for(item.fruit)
+            self.data_output_exchanges[target_aggregation_index].send(message)
 
         logging.info(f"Broadcasting EOF message")
         eof_message = message_protocol.internal.serialize([client_id_eof])

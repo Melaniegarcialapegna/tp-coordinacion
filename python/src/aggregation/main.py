@@ -43,9 +43,9 @@ class AggregationFilter:
 
         fruit_top = []
         for item in fruit_top_size:
-            fruit_top.append(((client_id_eof, item.fruit), item.amount))
+            fruit_top.append((item.fruit,item.amount))
 
-        self.output_queue.send(message_protocol.internal.serialize(fruit_top))
+        self.output_queue.send(message_protocol.internal.serialize([client_id_eof, fruit_top]))
 
     def process_messsage(self, message, ack, nack):
         logging.info("Process message")

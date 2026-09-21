@@ -23,6 +23,7 @@ class JoinFilter:
             MOM_HOST, OUTPUT_QUEUE
         )
 
+
     def process_messsage(self, message, ack, nack):
         logging.info("Received top")
         fruit_top = message_protocol.internal.deserialize(message)

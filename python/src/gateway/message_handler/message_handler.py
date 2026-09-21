@@ -25,9 +25,9 @@ class MessageHandler:
         In case it is not for this client, returns None, otherwise returns the fruit and amount.
         """
         fields = message_protocol.internal.deserialize(message)
-        [(id_client,fruit),amount] = fields
+        [id_client,fruit_top] = fields
 
         if id_client != self.client_id:
             return None
         
-        return [fruit, amount]
+        return fruit_top

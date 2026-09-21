@@ -11,7 +11,7 @@ class MessageHandler:
         Serialize the message adding a client id
         """
         [fruit, amount] = message
-        return message_protocol.internal.serialize([(self.client_id, fruit), amount])
+        return message_protocol.internal.serialize([self.client_id, fruit, amount])
 
     def serialize_eof_message(self, message):
         """

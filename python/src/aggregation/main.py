@@ -27,10 +27,10 @@ class AggregationFilter:
 
     def _process_data(self,client_id , fruit, amount):
         logging.info("Processing data message")
-        client_fruit_top = self.client_fruits.setdefault(client_id,{}) # return a reference of the dict
+        client_fruit_top = self.client_fruits.setdefault(client_id,{}) # return a reference of the dict ~ O(1)
         new_fruit_item = fruit_item.FruitItem(fruit, amount)
 
-        if fruit in client_fruit_top:
+        if fruit in client_fruit_top: # O(1)
             client_fruit_top[fruit] = client_fruit_top[fruit] + new_fruit_item
         else:
             client_fruit_top[fruit] = new_fruit_item
@@ -51,12 +51,10 @@ class AggregationFilter:
         logging.info("Process message")
         fields = message_protocol.internal.deserialize(message)
 
-        if len(fields) == 2:
-            [(client_id, fruit), amount] = fields
-            self._process_data(client_id, fruit, amount)
+        if len(fields) == 3:
+            self._process_data(*fields)
         else:
-            [client_id] = fields
-            self._process_eof(client_id)
+            self._process_eof(*fields)
         ack()
 
 

@@ -44,7 +44,7 @@ class AggregationFilter:
         fruit_chunk.reverse()
         fruit_top = list(
             map(
-                lambda fruit_item: (fruit_item.fruit, fruit_item.amount),
+                lambda fruit_item: ((client_id_eof, fruit_item.fruit), fruit_item.amount),
                 fruit_chunk,
             )
         )

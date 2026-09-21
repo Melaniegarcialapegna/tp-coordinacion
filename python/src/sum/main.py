@@ -45,16 +45,17 @@ class SumFilter:
 
         logging.info(f"Broadcasting EOF message")
         for data_output_exchange in self.data_output_exchanges:
-            data_output_exchange.send(message_protocol.internal.serialize([]))
+            data_output_exchange.send(message_protocol.internal.serialize([client_id_eof]))
 
 
     def process_data_messsage(self, message, ack, nack):
         fields = message_protocol.internal.deserialize(message)
-        [(client_id, fruit), amount] = fields
 
         if len(fields) == 2:
+            [(client_id, fruit), amount] = fields
             self._process_data(client_id, fruit, amount)
         else:
+            [client_id] = fields
             self._process_eof(client_id)
         ack()
 

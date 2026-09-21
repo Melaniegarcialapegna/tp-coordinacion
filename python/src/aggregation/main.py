@@ -25,6 +25,7 @@ class AggregationFilter:
         )
         self.client_fruits = {} # {client_id: {fruit: FruitItem}}
 
+
     def _process_data(self,client_id , fruit, amount):
         logging.info("Processing data message")
         client_fruit_top = self.client_fruits.setdefault(client_id,{}) # return a reference of the dict ~ O(1)
@@ -38,7 +39,7 @@ class AggregationFilter:
 
     def _process_eof(self,client_id_eof):
         logging.info("Received EOF")
-        client_fruits = self.client_fruits.pop(client_id_eof)
+        client_fruits = self.client_fruits.get(client_id_eof,{})
         fruit_top_size = heapq.nlargest(TOP_SIZE, client_fruits.values()) # O(n log TOP_SIZE)
 
         fruit_top = []
@@ -46,6 +47,7 @@ class AggregationFilter:
             fruit_top.append((item.fruit,item.amount))
 
         self.output_queue.send(message_protocol.internal.serialize([client_id_eof, fruit_top]))
+        self.client_fruits.pop(client_id_eof,None)
 
     def process_messsage(self, message, ack, nack):
         logging.info("Process message")

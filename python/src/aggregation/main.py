@@ -24,6 +24,7 @@ class AggregationFilter:
             MOM_HOST, OUTPUT_QUEUE
         )
         self.client_fruits = {} # {client_id: {fruit: FruitItem}}
+        self.client_eof_count = {}
 
 
     def _process_data(self,client_id , fruit, amount):
@@ -39,7 +40,16 @@ class AggregationFilter:
 
     def _process_eof(self,client_id_eof):
         logging.info("Received EOF")
-        client_fruits = self.client_fruits.get(client_id_eof,{})
+
+        # Wait until all instances of SumFilter send an EOF for the same client before calculating the top fruits for that client
+        eof_count = self.client_eof_count.get(client_id_eof, 0) + 1
+        self.client_eof_count[client_id_eof] = eof_count
+
+        if eof_count < SUM_AMOUNT:
+            logging.info(f"Waiting for {SUM_AMOUNT - eof_count} restant EOF messages for client {client_id_eof}")
+            return
+
+        client_fruits = self.client_fruits.pop(client_id_eof,{})
         fruit_top_size = heapq.nlargest(TOP_SIZE, client_fruits.values()) # O(n log TOP_SIZE)
 
         fruit_top = []
@@ -47,7 +57,8 @@ class AggregationFilter:
             fruit_top.append((item.fruit,item.amount))
 
         self.output_queue.send(message_protocol.internal.serialize([client_id_eof, fruit_top]))
-        self.client_fruits.pop(client_id_eof,None)
+
+        self.client_eof_count.pop(client_id_eof,None)
 
     def process_messsage(self, message, ack, nack):
         logging.info("Process message")

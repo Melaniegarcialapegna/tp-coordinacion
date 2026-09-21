@@ -54,7 +54,7 @@ class SumFilter:
 
     def _process_eof(self, client_id_eof):
         logging.info("Broadcasting data messages")
-        client_fruits = self.amount_by_clients_and_fruit.get(client_id_eof,{})
+        client_fruits = self.amount_by_clients_and_fruit.pop(client_id_eof,{})
 
         for item in client_fruits.values():
             message = message_protocol.internal.serialize([client_id_eof, item.fruit, item.amount])
@@ -66,7 +66,6 @@ class SumFilter:
         for data_output_exchange in self.data_output_exchanges:
             data_output_exchange.send(eof_message)
 
-        self.amount_by_clients_and_fruit.pop(client_id_eof, None)
 
 
     def process_data_messsage(self, message, ack, nack):

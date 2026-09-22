@@ -38,8 +38,8 @@ class JoinFilter:
         partials_count = self.client_partials_top_count.get(client_id, 0) + 1
         self.client_partials_top_count[client_id] = partials_count
 
-        if partials_count < SUM_AMOUNT:
-            logging.info(f"Waiting for {SUM_AMOUNT - partials_count} restant partial top messages for client {client_id}")
+        if partials_count < AGGREGATION_AMOUNT:
+            logging.info(f"Waiting for {AGGREGATION_AMOUNT - partials_count} restant partial top messages for client {client_id}")
             return
 
         logging.info(f"Merging final top for client {client_id}")

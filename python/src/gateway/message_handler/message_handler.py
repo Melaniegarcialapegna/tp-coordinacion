@@ -5,19 +5,21 @@ class MessageHandler:
 
     def __init__(self):
         self.client_id = uuid.uuid4().hex #32 aleatory characters
+        self.fruit_count = 0
     
     def serialize_data_message(self, message):
         """
         Serialize the message adding a client id
         """
         [fruit, amount] = message
+        self.fruit_count += 1
         return message_protocol.internal.serialize([self.client_id, fruit, amount])
 
     def serialize_eof_message(self, message):
         """
         Serialize the EOF message adding a client id to know which client sent the EOF message.
         """
-        return message_protocol.internal.serialize([self.client_id])
+        return message_protocol.internal.serialize([self.client_id, self.fruit_count])
 
     def deserialize_result_message(self, message):
         """

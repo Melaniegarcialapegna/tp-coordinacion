@@ -1,6 +1,7 @@
 import os
 import logging
 import heapq
+import signal
 
 from common import middleware, message_protocol, fruit_item
 
@@ -26,6 +27,13 @@ class JoinFilter:
 
         self.items_by_client = {} # {client_id:[FruitItem,..]}
         self.client_partials_top_count = {} 
+
+        signal.signal(signal.SIGTERM, self._handle_sigterm)
+
+
+    def _handle_sigterm(self, signum, frame):
+        logging.info("Received SIGTERM signal")
+        self.input_queue.stop_consuming()
 
 
     def _process_partial_top(self, client_id, fruit_top):
@@ -63,7 +71,12 @@ class JoinFilter:
 
 
     def start(self):
-        self.input_queue.start_consuming(self.process_messsage)
+        try: 
+            self.input_queue.start_consuming(self.process_messsage)
+        finally:
+            logging.info("Closing connections")
+            self.input_queue.close()
+            self.output_queue.close()
 
 
 def main():

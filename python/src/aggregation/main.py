@@ -1,6 +1,7 @@
 import os
 import logging
 import heapq
+import signal
 
 from common import middleware, message_protocol, fruit_item
 
@@ -25,6 +26,12 @@ class AggregationFilter:
         )
         self.client_fruits = {} # {client_id: {fruit: FruitItem}}
         self.client_eof_count = {}
+
+        signal.signal(signal.SIGTERM, self._handle_sigterm)
+
+    def _handle_sigterm(self, signum, frame):
+        logging.info("Received SIGTERM signal")
+        self.input_exchange.stop_consuming()
 
 
     def _process_data(self,client_id , fruit, amount):
@@ -60,6 +67,7 @@ class AggregationFilter:
 
         self.client_eof_count.pop(client_id_eof,None)
 
+
     def process_messsage(self, message, ack, nack):
         logging.info("Process message")
         fields = message_protocol.internal.deserialize(message)
@@ -72,7 +80,12 @@ class AggregationFilter:
 
 
     def start(self):
-        self.input_exchange.start_consuming(self.process_messsage)
+        try:
+            self.input_exchange.start_consuming(self.process_messsage)
+        finally:
+            logging.info("Closing connections")
+            self.input_exchange.close()
+            self.output_queue.close()
 
 
 def main():

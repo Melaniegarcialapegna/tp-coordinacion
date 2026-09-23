@@ -83,7 +83,6 @@ def main():
     logging.basicConfig(level=logging.INFO)
     join_filter = JoinFilter()
     join_filter.start()
-
     return 0
 
 

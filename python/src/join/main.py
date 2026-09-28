@@ -80,8 +80,11 @@ class JoinFilter:
             logging.exception(f"Error while consuming messages: {e}")
         finally:
             logging.info("Closing connections")
-            self.input_queue.close()
-            self.output_queue.close()
+            for connection in (self.input_queue, self.output_queue):
+                try:
+                    connection.close()
+                except Exception as e:
+                    logging.exception(f"Error closing connection: {e}")
 
 
 def main():

@@ -74,7 +74,7 @@ class SumFilter:
             try:
                 connection.close()
             except Exception as e:
-                logging.warning(f"Error closing connection: {e}")
+                logging.exception(f"Error closing connection: {e}")
 
 
     def _process_data(self, client_id, fruit, amount):

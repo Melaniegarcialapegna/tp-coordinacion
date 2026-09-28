@@ -2,6 +2,7 @@ import os
 import logging
 import threading
 import hashlib
+import signal
 
 from common import middleware, message_protocol, fruit_item
 
@@ -16,6 +17,7 @@ AGGREGATION_PREFIX = os.environ["AGGREGATION_PREFIX"]
 EOF_ROUTING_KEY = "EOF_ROUTING_KEY"
 MSG_CLIENT_EOF = "CLIENT_EOF"
 MSG_CLIENT_COUNT = "CLIENT_COUNT"
+TIMEOUT_SECONDS = 5
 
 class SumFilter:
     def __init__(self):
@@ -43,6 +45,36 @@ class SumFilter:
 
         self.expected_total_by_clients = {} 
         self.confirmed_counts_by_clients = {}
+
+        signal.signal(signal.SIGTERM, self._handle_sigterm)
+
+
+    def _handle_sigterm(self, signum, frame):
+        logging.info("Received SIGTERM signal")
+        try:
+            self._stop_consuming_threadsafe(self.input_queue)
+            self._stop_consuming_threadsafe(self.control_eof_consumer)
+        except Exception as e:
+            logging.exception(f"Error while stopping consuming: {e}")
+
+
+    def _stop_consuming_threadsafe(self, consumer):
+        consumer.connection.add_callback_threadsafe(consumer.stop_consuming)
+
+
+    def _close_connections(self):
+        connections = [
+            self.input_queue,
+            self.control_eof_consumer,
+            self.control_eof_publisher,
+            *self.data_output_exchanges,
+        ]
+
+        for connection in connections:
+            try:
+                connection.close()
+            except Exception as e:
+                logging.warning(f"Error closing connection: {e}")
 
 
     def _process_data(self, client_id, fruit, amount):
@@ -140,10 +172,30 @@ class SumFilter:
             self._handle_coordination_message(*fields)
         ack()
 
-    def start(self):
-        threading.Thread(target= lambda: self.control_eof_consumer.start_consuming(self.process_coordination_message),daemon=True).start()
 
-        self.input_queue.start_consuming(self.process_data_messsage)
+    def start(self):
+        coordination_thread = None
+        try:
+            coordination_thread = threading.Thread(target= lambda: self.control_eof_consumer.start_consuming(self.process_coordination_message),daemon=True)
+            coordination_thread.start()
+            
+            self.input_queue.start_consuming(self.process_data_messsage)
+
+        except Exception as e:
+            logging.exception(f"Error while consuming messages: {e}")
+
+        finally:
+            logging.info("Shutting down: Closing connections")
+            if coordination_thread.is_alive():
+                # if consume of messages finished for an error and not for a SIGTERM
+                try:
+                    self._stop_consuming_threadsafe(self.control_eof_consumer)
+                except Exception as e:
+                    logging.exception(f"Error while stopping consuming: {e}")
+                finally:
+                    coordination_thread.join(timeout=TIMEOUT_SECONDS)
+
+            self._close_connections()
 
 
 def main():

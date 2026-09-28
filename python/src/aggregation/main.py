@@ -31,7 +31,10 @@ class AggregationFilter:
 
     def _handle_sigterm(self, signum, frame):
         logging.info("Received SIGTERM signal")
-        self.input_exchange.stop_consuming()
+        try:
+            self.input_exchange.stop_consuming()
+        except Exception as e:
+            logging.exception(f"Error while stopping consuming: {e}")
 
 
     def _process_data(self,client_id , fruit, amount):
@@ -82,6 +85,8 @@ class AggregationFilter:
     def start(self):
         try:
             self.input_exchange.start_consuming(self.process_messsage)
+        except Exception as e:
+            logging.exception(f"Error while consuming messages: {e}")
         finally:
             logging.info("Closing connections")
             self.input_exchange.close()

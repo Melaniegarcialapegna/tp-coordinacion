@@ -33,7 +33,10 @@ class JoinFilter:
 
     def _handle_sigterm(self, signum, frame):
         logging.info("Received SIGTERM signal")
-        self.input_queue.stop_consuming()
+        try:
+            self.input_queue.stop_consuming()
+        except Exception as e:
+            logging.exception(f"Error while stopping consuming: {e}")
 
 
     def _process_partial_top(self, client_id, fruit_top):
@@ -73,6 +76,8 @@ class JoinFilter:
     def start(self):
         try: 
             self.input_queue.start_consuming(self.process_messsage)
+        except Exception as e:
+            logging.exception(f"Error while consuming messages: {e}")
         finally:
             logging.info("Closing connections")
             self.input_queue.close()

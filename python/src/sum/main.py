@@ -52,14 +52,10 @@ class SumFilter:
     def _handle_sigterm(self, signum, frame):
         logging.info("Received SIGTERM signal")
         try:
-            self._stop_consuming_threadsafe(self.input_queue)
-            self._stop_consuming_threadsafe(self.control_eof_consumer)
+            self.input_queue.stop_consuming()
+            self.control_eof_consumer.request_stop_consuming()
         except Exception as e:
             logging.exception(f"Error while stopping consuming: {e}")
-
-
-    def _stop_consuming_threadsafe(self, consumer):
-        consumer.connection.add_callback_threadsafe(consumer.stop_consuming)
 
 
     def _close_connections(self):
@@ -189,7 +185,7 @@ class SumFilter:
             if coordination_thread.is_alive():
                 # if consume of messages finished for an error and not for a SIGTERM
                 try:
-                    self._stop_consuming_threadsafe(self.control_eof_consumer)
+                    self.control_eof_consumer.request_stop_consuming()
                 except Exception as e:
                     logging.exception(f"Error while stopping consuming: {e}")
                 finally:

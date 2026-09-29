@@ -68,6 +68,12 @@ class MessageMiddlewareRabbitMQ:
         except self.PIKA_DISCONNECTION_ERRORS as error:
             raise MessageMiddlewareDisconnectedError(str(error))
 
+    def request_stop_consuming(self):
+        if not self.consuming:
+            return
+        
+        self.connection.add_callback_threadsafe(self.stop_consuming)
+
     def close(self):
         try:
             self.connection.close()
